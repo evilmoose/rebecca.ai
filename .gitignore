@@ -1,0 +1,32 @@
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+/backend/.env
+/backend/.venv
+/backend/ignore
+
+# Ignore all image files in uploads directories
+/backend/uploads
+/backend/uploads/*.jpg
+/backend/uploads/*.jpeg
+/backend/uploads/*.png
+/backend/uploads/*.gif
+/backend/uploads/*.webp
+/backend/uploads/*.svg
+/backend/uploads/*.bmp
+/backend/uploads/*.ico
+
+# Ignore Python cache
+__pycache__/
+**/__pycache__/
+/ignore
+
+# Ignore compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# developer docs

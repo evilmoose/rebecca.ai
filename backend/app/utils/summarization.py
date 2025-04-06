@@ -16,7 +16,7 @@ def summarize_text(text: str) -> str:
     Returns:
         str: The summarized text
     """
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro")
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
     chain = load_summarize_chain(llm, chain_type="map_reduce")
     chunks = [Document(page_content=text[i:i+1000]) for i in range(0, len(text), 1000)]
     return chain.run(chunks)

@@ -11,6 +11,7 @@ from app.core.db import test_db_connection
 # add routers
 from app.api.users import auth_backend, fastapi_users
 from app.api.chat import router as chat_router
+from app.api.video_router import router as video_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -78,6 +79,13 @@ app.include_router(
     chat_router,
     prefix=f"{settings.API_V1_STR}",
     tags=["chat"],
+)
+
+# Include video routes
+app.include_router(
+    video_router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["video"],
 )
 
 # Root endpoint

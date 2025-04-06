@@ -1,17 +1,20 @@
 import MainPanelFooter from "./MainPanelFooter";
 import MainPanelHeader from "./MainPaneHeader";
-import { PenLine, Image, UserCircle, Code, Send, Trash2 } from 'lucide-react';
+import { PenLine, Image, UserCircle, Code, Send, Trash2, Video } from 'lucide-react';
 import { useChat } from '../contexts/ChatContext';
 import { useState, useRef, useEffect } from 'react';
 
-const ActionCard = ({ icon: Icon, title }) => (
-    <div className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+const ActionCard = ({ icon: Icon, title, onClick }) => (
+    <div 
+        className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        onClick={onClick}
+    >
         <div className={`p-2 rounded-lg mr-3 ${title.includes('Write') ? 'bg-amber-50' : 
             title.includes('Image') ? 'bg-blue-50' : 
-            title.includes('avatar') ? 'bg-green-50' : 'bg-pink-50'}`}>
+            title.includes('Video') ? 'bg-purple-50' : 'bg-pink-50'}`}>
             <Icon className={`h-5 w-5 ${title.includes('Write') ? 'text-amber-600' : 
                 title.includes('Image') ? 'text-blue-600' : 
-                title.includes('avatar') ? 'text-green-600' : 'text-pink-600'}`} />
+                title.includes('Video') ? 'text-purple-600' : 'text-pink-600'}`} />
         </div>
         <span className="text-sm text-gray-700">{title}</span>
         <span className="ml-auto text-lg text-gray-400">+</span>
@@ -112,6 +115,129 @@ const ChatContainer = ({ onClose }) => {
     );
 };
 
+const VideoUploadContainer = () => {
+    const [file, setFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [error, setError] = useState(null);
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            setError(null);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!file) return;
+
+        setIsUploading(true);
+        setError(null);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            // Get the authentication token from localStorage
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                throw new Error('No authentication token found. Please log in.');
+            }
+
+            const response = await fetch('/api/v1/video/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Session expired. Please log in again.');
+                }
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Upload failed');
+            }
+
+            const data = await response.json();
+            // Handle the response data (transcript and summary)
+            console.log('Upload successful:', data);
+        } catch (error) {
+            console.error('Upload error:', error);
+            setError(error.message);
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-sm p-6 h-full overflow-hidden flex flex-col">
+            <div className="overflow-y-auto flex-1 min-h-0">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload and Process Video</h2>
+                
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                        {error}
+                    </div>
+                )}
+                
+                <div className="space-y-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input
+                            type="file"
+                            accept="video/*"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="video-upload"
+                        />
+                        <label
+                            htmlFor="video-upload"
+                            className="cursor-pointer block"
+                        >
+                            <Video className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-600">
+                                {file ? file.name : 'Click to select a video file'}
+                            </p>
+                        </label>
+                    </div>
+
+                    {file && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">File: {file.name}</span>
+                                <span className="text-sm text-gray-600">
+                                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                </span>
+                            </div>
+                            
+                            {isUploading && (
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div
+                                        className="bg-purple-600 h-2.5 rounded-full"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    ></div>
+                                </div>
+                            )}
+                            
+                            <button
+                                onClick={handleUpload}
+                                disabled={isUploading}
+                                className="w-full py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                            >
+                                {isUploading ? 'Processing...' : 'Upload and Process'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ContentContainer = () => (
     <div className="bg-white rounded-lg shadow-sm p-6 h-full overflow-hidden flex flex-col">
         <div className="overflow-y-auto flex-1 min-h-0">
@@ -157,6 +283,13 @@ const MainPanel = ({
     isInputFocused,
     setIsInputFocused 
 }) => {
+    const [selectedTask, setSelectedTask] = useState(null);
+
+    const handleTaskSelect = (task) => {
+        setSelectedTask(task);
+        setIsInputFocused(true);
+    };
+
     return (
         <div 
             id={id} 
@@ -182,15 +315,31 @@ const MainPanel = ({
                     // Welcome View
                     <div className="max-w-4xl mx-auto pt-12 pb-8">
                         <div className="text-center mb-8">
-                            <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome to Script</h1>
-                            <p className="text-gray-600">Get started by Script a task and Chat can do the rest. Not sure where to start?</p>
+                            <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome Rebecca.ai</h1>
+                            <p className="text-gray-600">Get started by selecting a task below. Not sure where to start?</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
-                            <ActionCard icon={PenLine} title="Write copy" />
-                            <ActionCard icon={Image} title="Image generation" />
-                            <ActionCard icon={UserCircle} title="Create avatar" />
-                            <ActionCard icon={Code} title="Write code" />
+                            <ActionCard 
+                                icon={PenLine} 
+                                title="Write copy" 
+                                onClick={() => handleTaskSelect('copy')}
+                            />
+                            <ActionCard 
+                                icon={Image} 
+                                title="Image generation" 
+                                onClick={() => handleTaskSelect('image')}
+                            />
+                            <ActionCard 
+                                icon={Video} 
+                                title="Transcribe and Summarize Video" 
+                                onClick={() => handleTaskSelect('video')}
+                            />
+                            <ActionCard 
+                                icon={Code} 
+                                title="Write code" 
+                                onClick={() => handleTaskSelect('code')}
+                            />
                         </div>
 
                         <div className="bg-white rounded-lg shadow-sm p-3">
@@ -202,9 +351,7 @@ const MainPanel = ({
                                     onFocus={() => setIsInputFocused(true)}
                                 />
                                 <button className="text-gray-400 hover:text-gray-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                    </svg>
+                                    <Send className="h-5 w-5" />
                                 </button>
                             </div>
                             <div className="flex items-center gap-4 mt-3 pt-3 border-t">
@@ -234,7 +381,11 @@ const MainPanel = ({
                     // Split View
                     <div className="h-full grid grid-cols-2 gap-4 min-h-0">
                         <ChatContainer onClose={() => setIsInputFocused(false)} />
-                        <ContentContainer />
+                        {selectedTask === 'video' ? (
+                            <VideoUploadContainer />
+                        ) : (
+                            <ContentContainer />
+                        )}
                     </div>
                 )}
             </div>

@@ -18,6 +18,7 @@
 /backend/uploads/*.svg
 /backend/uploads/*.bmp
 /backend/uploads/*.ico
+/backend/temp_uploads/
 
 # Ignore Python cache
 __pycache__/

@@ -1,6 +1,8 @@
 import MainPanelFooter from "./MainPanelFooter";
 import MainPanelHeader from "./MainPaneHeader";
-import { PenLine, Image, UserCircle, Code } from 'lucide-react';
+import { PenLine, Image, UserCircle, Code, Send, Trash2 } from 'lucide-react';
+import { useChat } from '../contexts/ChatContext';
+import { useState, useRef, useEffect } from 'react';
 
 const ActionCard = ({ icon: Icon, title }) => (
     <div className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
@@ -16,62 +18,104 @@ const ActionCard = ({ icon: Icon, title }) => (
     </div>
 );
 
-const ChatContainer = ({ onClose }) => (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm">
-        <div className="flex-grow overflow-y-auto p-4">
-            {/* Chat messages will go here */}
-            <div className="flex items-start gap-3 mb-6">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <UserCircle className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-grow">
-                    <p className="text-sm text-gray-900 font-medium">Generate 5 attention-grabbing headlines</p>
-                    <p className="text-sm text-gray-600">for an article about AI Chat Copywriter</p>
-                </div>
-            </div>
+const Message = ({ role, content }) => (
+    <div className={`flex items-start gap-3 mb-6 ${role === 'user' ? 'justify-end' : ''}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            role === 'user' ? 'bg-blue-100' : 'bg-gray-100'
+        }`}>
+            {role === 'user' ? (
+                <UserCircle className="w-6 h-6 text-blue-600" />
+            ) : (
+                <Code className="w-6 h-6 text-gray-600" />
+            )}
         </div>
-        <div className="border-t p-3">
-            <div className="flex items-center gap-3">
-                <input 
-                    type="text"
-                    placeholder="Summarize the latest"
-                    className="flex-1 bg-transparent outline-none text-gray-700"
-                />
-                <button className="text-gray-400 hover:text-gray-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                </button>
-            </div>
-            <div className="flex items-center gap-4 mt-3 pt-3 border-t">
-                <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                    </svg>
-                    Attach
-                </button>
-                <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                    Voice Message
-                </button>
-                <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Browse Prompts
-                </button>
-                <span className="ml-auto text-sm text-gray-400">20 / 3,000</span>
-            </div>
+        <div className={`flex-grow max-w-[80%] ${
+            role === 'user' ? 'bg-blue-50' : 'bg-gray-50'
+        } p-3 rounded-lg`}>
+            <p className="text-sm text-gray-900">{content}</p>
         </div>
     </div>
 );
 
+const ChatContainer = ({ onClose }) => {
+    const { messages, isLoading, sendMessage, resetChat } = useChat();
+    const [inputValue, setInputValue] = useState('');
+    const messagesEndRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!inputValue.trim() || isLoading) return;
+        
+        await sendMessage(inputValue);
+        setInputValue('');
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {messages.map((message, index) => (
+                    <Message key={index} {...message} />
+                ))}
+                {isLoading && (
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <Code className="w-6 h-6 text-gray-600" />
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                            <div className="flex gap-1">
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+            <div className="border-t p-3 bg-white">
+                <form onSubmit={handleSubmit} className="flex items-center gap-3">
+                    <input 
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        placeholder="Type your message..."
+                        className="flex-1 bg-transparent outline-none text-gray-700"
+                        disabled={isLoading}
+                    />
+                    <button 
+                        type="submit"
+                        disabled={isLoading || !inputValue.trim()}
+                        className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    >
+                        <Send className="h-5 w-5" />
+                    </button>
+                </form>
+                <div className="flex items-center gap-4 mt-3 pt-3 border-t">
+                    <button 
+                        onClick={resetChat}
+                        className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        Clear Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ContentContainer = () => (
-    <div className="bg-white rounded-lg shadow-sm p-6 h-full">
-        <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Here's the results of 5 attention-grabbing headlines:</h2>
+    <div className="bg-white rounded-lg shadow-sm p-6 h-full overflow-hidden flex flex-col">
+        <div className="overflow-y-auto flex-1 min-h-0">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Here's the results of 5 attention-grabbing headlines:</h2>
             <ol className="list-decimal pl-4 space-y-3">
                 <li className="text-gray-700">"Revolutionize Customer Engagement with AI Chat Copywriter"</li>
                 <li className="text-gray-700">"Unleash the Power of AI Chat Copywriters for Transformative Customer Experiences"</li>
@@ -120,6 +164,7 @@ const MainPanel = ({
                 ${className}
                 transition-all duration-300 ease-in-out
                 ${isCollapsed ? 'ml-0' : 'ml-[250px]'}
+                flex flex-col h-screen
             `}
             style={{
                 width: isCollapsed ? '100%' : 'calc(100% - 250px)'
@@ -127,12 +172,12 @@ const MainPanel = ({
         >
             <MainPanelHeader
                 id={"main-panel-header"}
-                className={"bg-white shadow-sm p-2 border-b"} 
+                className={"bg-white shadow-sm p-2 border-b flex-none"} 
                 isCollapsed={isCollapsed}
                 toggleCollapse={toggleCollapse}   
             />
 
-            <div className="flex-grow p-4 bg-gray-50 min-h-screen">
+            <div className="flex-1 p-4 bg-gray-50 min-h-0">
                 {!isInputFocused ? (
                     // Welcome View
                     <div className="max-w-4xl mx-auto pt-12 pb-8">
@@ -187,7 +232,7 @@ const MainPanel = ({
                     </div>
                 ) : (
                     // Split View
-                    <div className="h-[calc(100vh-120px)] grid grid-cols-2 gap-4">
+                    <div className="h-full grid grid-cols-2 gap-4 min-h-0">
                         <ChatContainer onClose={() => setIsInputFocused(false)} />
                         <ContentContainer />
                     </div>
@@ -196,7 +241,7 @@ const MainPanel = ({
 
             <MainPanelFooter 
                 id={"main-panel-footer"}
-                className={"bg-neutral-800 text-white p-2 text-center"}  
+                className={"bg-neutral-800 text-white p-2 text-center flex-none"}  
             />
         </div>
     );

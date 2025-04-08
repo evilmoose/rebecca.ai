@@ -7,7 +7,7 @@ from app.schemas.research import ResearchRequest, ResearchResponse, TaskResponse
 from sqlalchemy import select
 from typing import Dict, Any
 from app.models.user import User
-from app.core.auth import current_user
+from app.api.users import current_active_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ router = APIRouter()
 @router.post("/deep-research", response_model=TaskResponse)
 async def create_research(
     request: ResearchRequest,
-    current_user: User = Depends(current_user),
+    current_user: User = Depends(current_active_user),
 ):
     """Start a new deep research task."""
     task = run_deep_research_task.delay(current_user.id, request.query)
@@ -29,7 +29,7 @@ async def create_research(
 @router.get("/deep-research/{task_id}", response_model=ResearchResponse)
 async def get_research_result(
     task_id: str,
-    current_user: User = Depends(current_user),
+    current_user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Get research results."""

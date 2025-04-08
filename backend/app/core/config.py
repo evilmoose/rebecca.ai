@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
 
+    # Redis settings
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    
+    # Research settings
+    MAX_RESEARCH_TIME: int = 3600  # 1 hour
+    MAX_SEARCH_RESULTS: int = 5
+    
+    # Google settings
+    GOOGLE_CSE_ID: str  # Custom Search Engine ID
+    GOOGLE_SEARCH_API_KEY: str
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 

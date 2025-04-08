@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 /**
  * Service for interacting with the authentication API endpoints.
  */
@@ -12,20 +10,38 @@ const authService = {
    * @returns {Promise<Object>} - The login response with access token
    */
   login: async (email, password) => {
-    const response = await axios.post(
-      `/auth/jwt/login`,
-      new URLSearchParams({
-        username: email,
-        password: password,
-      }),
-      {
+    try {
+      const response = await fetch('/api/v1/auth/jwt/login', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
+        body: new URLSearchParams({
+          username: email,
+          password: password,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to login');
       }
-    );
-    
-    return response.data;
+
+      const data = await response.json();
+      
+      // Store token and user data
+      const { access_token } = data;
+      localStorage.setItem('token', access_token);
+      
+      // Get user profile
+      const userProfile = await authService.getCurrentUser();
+      localStorage.setItem('user', JSON.stringify(userProfile));
+      
+      return userProfile;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   },
   
   /**
@@ -37,58 +53,102 @@ const authService = {
    * @returns {Promise<Object>} - The registration response
    */
   register: async (name, email, password) => {
-    // Split name into first_name and last_name
-    const nameParts = name.split(' ');
-    const first_name = nameParts[0];
-    const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-    
-    const response = await axios.post(
-      `/auth/register`,
-      {
-        email, 
-        password,
-        first_name,
-        last_name,
-        is_active: true,
-        is_verified: false,
-        is_superuser: false
-      },
-      {
+    try {
+      // Split name into first_name and last_name
+      const nameParts = name.split(' ');
+      const first_name = nameParts[0];
+      const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
+      const response = await fetch('/api/v1/auth/register', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email, 
+          password,
+          first_name,
+          last_name,
+          is_active: true,
+          is_verified: false,
+          is_superuser: false
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to register');
       }
-    );
-    
-    return response.data;
+
+      // After successful registration, log the user in
+      return await authService.login(email, password);
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   },
   
   /**
    * Get the current user's profile
    * 
-   * @param {string} token - Authentication token
    * @returns {Promise<Object>} - The user profile
    */
-  getCurrentUser: async (token) => {
-    const response = await axios.get(
-      `/users/me`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+  getCurrentUser: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
       }
-    );
-    
-    return response.data;
+
+      const response = await fetch('/api/v1/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Handle unauthorized access
+          authService.logout();
+          throw new Error('Session expired. Please login again.');
+        }
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to fetch user profile');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Get user error:', error);
+      throw error;
+    }
   },
-  
+
+  /**
+   * Logout the current user
+   */
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  },
+
+  /**
+   * Check if user is authenticated
+   * @returns {boolean} - True if user is authenticated
+   */
+  isAuthenticated: () => {
+    return !!localStorage.getItem('token');
+  },
+
   /**
    * Get authentication headers for API requests
    * 
-   * @param {string} token - Authentication token
    * @returns {Object} - Headers object with Authorization
    */
-  getAuthHeaders: (token) => {
+  getAuthHeaders: () => {
+    const token = localStorage.getItem('token');
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',

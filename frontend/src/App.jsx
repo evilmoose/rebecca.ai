@@ -53,7 +53,55 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <ChatProvider>
+                  <Dashboard />
+                </ChatProvider>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin routes */}
+          <Route
+            path="/admin/*"
+            element={
+              <AdminRoute>
+                <Routes>
+                  {/* Add admin routes here */}
+                </Routes>
+              </AdminRoute>
+            }
+          />
+
+          {/* 404 route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </AuthProvider>
     </Router>
   );

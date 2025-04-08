@@ -1,7 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
+
+class YouTubeURL(BaseModel):
+    """Schema for YouTube URL input."""
+    url: HttpUrl
 
 class VideoNoteCreate(BaseModel):
     """Schema for creating a video note."""

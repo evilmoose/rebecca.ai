@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_users import schemas
 from app.core.config import settings
 from app.core.db import test_db_connection
+from fastapi.responses import JSONResponse
 
 # add routers
 from app.api.users import auth_backend, fastapi_users

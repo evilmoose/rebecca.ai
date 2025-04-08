@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PenLine, Image, Video, Code, Send } from 'lucide-react';
+import { PenLine, Video, Code, Send, Search } from 'lucide-react';
 import MainPanelHeader from "./MainPaneHeader";
 import MainPanelFooter from "./MainPanelFooter";
 import ActionCard from "./ActionCard";
@@ -58,9 +58,9 @@ const MainPanel = ({
                                 onClick={() => handleTaskSelect('copy')}
                             />
                             <ActionCard 
-                                icon={Image} 
-                                title="Image generation" 
-                                onClick={() => handleTaskSelect('image')}
+                                icon={Search} 
+                                title="Deep Research" 
+                                onClick={() => handleTaskSelect('copy')}
                             />
                             <ActionCard 
                                 icon={Video} 

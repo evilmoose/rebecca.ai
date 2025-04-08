@@ -54,6 +54,16 @@ class AsyncDocumentReader(BaseTool):
         return await self.tool.read_and_summarize(text)
 
 class ResearchService:
+    class GraphState(TypedDict):
+        messages: List[BaseMessage]
+        next_step: Literal["plan", "research", "summarize", "end"]
+        research_plan: Optional[str]
+        research_results: List[str]
+        final_summary: Optional[str]
+        progress: Dict[str, float]
+        current_tool: Optional[str]
+        error: Optional[str]
+
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-pro",
@@ -69,17 +79,7 @@ class ResearchService:
         )
 
     def create_research_graph(self) -> StateGraph:
-        class GraphState(TypedDict):
-            messages: List[BaseMessage]
-            next_step: Literal["plan", "research", "summarize", "end"]
-            research_plan: Optional[str]
-            research_results: List[str]
-            final_summary: Optional[str]
-            progress: Dict[str, float]
-            current_tool: Optional[str]
-            error: Optional[str]
-
-        workflow = StateGraph(GraphState)
+        workflow = StateGraph(self.GraphState)
         
         # Add nodes for planning, research, and summarization
         workflow.add_node("plan", self._planning_node)

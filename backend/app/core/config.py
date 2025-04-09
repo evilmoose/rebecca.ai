@@ -30,8 +30,10 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
 
-    # Google API Key
+    # Google API Keys
     GOOGLE_API_KEY: str
+    GOOGLE_SEARCH_API_KEY: str
+    GOOGLE_CSE_ID: str   # Default CSE ID
     
     # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8

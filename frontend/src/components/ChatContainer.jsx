@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Code } from 'lucide-react';
+import { Send, Trash2, Code, Plus } from 'lucide-react';
 import { useChat } from '../contexts/ChatContext';
 import Message from './Message';
 
 const ChatContainer = ({ onClose }) => {
-    const { messages, isLoading, sendMessage, resetChat } = useChat();
+    const { messages, isLoading, sendMessage, resetChat, startNewThread } = useChat();
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -64,13 +64,20 @@ const ChatContainer = ({ onClose }) => {
                         <Send className="h-5 w-5" />
                     </button>
                 </form>
-                <div className="flex items-center gap-4 mt-3 pt-3 border-t">
+                <div className="flex items-center justify-between gap-4 mt-3 pt-3 border-t">
                     <button 
                         onClick={resetChat}
                         className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm"
                     >
                         <Trash2 className="h-4 w-4" />
                         Clear Chat
+                    </button>
+                    <button 
+                        onClick={startNewThread}
+                        className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Thread
                     </button>
                 </div>
             </div>

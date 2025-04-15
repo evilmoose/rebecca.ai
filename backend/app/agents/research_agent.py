@@ -3,7 +3,6 @@
 
 Contains a new LangChain agent with role prompt + tavily_search
 """
-
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -23,7 +22,7 @@ llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash",
     google_api_key=settings.GOOGLE_API_KEY,
     convert_system_message_to_human=True,
-    streaming=True
+    streaming=False
 )
 
 # Agent that uses tootls and follows the React Agent protocol
@@ -41,30 +40,27 @@ def research_agent_node(state: dict) -> dict:
     LangGraph node function that uses the research_agent to answer questions
     """
     messages = state["messages"]
+    task_flags = state.get("task_flags", {})
     
     # Find the last human message - extract the query
     last_human = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
     
-    if not last_human or not last_human.content:
+    if not last_human or not last_human.content.strip():
         # Safety check - return early if no valid message
         return {
-            "messages": [AIMessage(content="Research agent received empty input and could not respond.")]
+            "messages": [AIMessage(content="Research agent received empty input and could not respond.")],
+            "task_flags": task_flags
         }
         
-    user_message = last_human.content
-    
     try:
-        # Run the research agent
-        result = research_agent.run(user_message)
-        
-        if not result or not result.strip():
-            result = "I couldn't find relevant information at the moment."
-            
+        result = research_agent.run(last_human.content)
     except Exception as e:
-        # Handle any errors
         result = f"Research failed: {str(e)}"
-    
-    # Return as AIMessage (not HumanMessage) to avoid recursion issues
+
+    # Mark research complete
+    task_flags["research_complete"] = True
+
     return {
-        "messages": [AIMessage(content=result)]
+        "messages": [AIMessage(content=result)],
+        "task_flags": task_flags
     }

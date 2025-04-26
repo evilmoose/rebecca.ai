@@ -8,6 +8,8 @@
 /backend/.venv
 /backend/ignore
 /backend/logs
+/backend/temp_uploads
+/backend/app/ignore
 
 # Ignore all image files in uploads directories
 /backend/uploads

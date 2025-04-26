@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useThread } from './ThreadContext';
+import { getAuthHeaders } from '../utils/auth';
 
 const ChatContext = createContext();
 
@@ -7,25 +9,68 @@ export const ChatProvider = ({ children }) => {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [threadId, setThreadId] = useState(null);
     const [toolOutputs, setToolOutputs] = useState([]);
-
-    // Initialize thread ID on component mount
-    useEffect(() => {
-        // Check if a thread ID exists in localStorage
-        const storedThreadId = localStorage.getItem('chatThreadId');
-        if (storedThreadId) {
-            setThreadId(storedThreadId);
-        } else {
-            // Generate a new thread ID and store it
-            const newThreadId = uuidv4();
-            localStorage.setItem('chatThreadId', newThreadId);
-            setThreadId(newThreadId);
+    
+    // Get active thread from ThreadContext instead of managing thread ID internally
+    const { activeThread } = useThread();
+    
+    // Fetch messages for a specific thread
+    const fetchThreadMessages = useCallback(async (threadId) => {
+        if (!threadId) return;
+        
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            console.log('Fetching messages for thread:', threadId);
+            const response = await fetch(`http://localhost:8000/api/v1/threads/${threadId}/messages`, {
+                headers: getAuthHeaders()
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error fetching thread messages:', errorText);
+                throw new Error(`Failed to fetch messages: ${response.status} ${errorText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Thread messages received:', data);
+            
+            // Make sure messages are in the expected format for the frontend
+            const formattedMessages = data.messages && data.messages.length > 0 
+                ? data.messages.map(msg => {
+                    // Make sure each message has the required properties
+                    return {
+                        role: msg.role || 'assistant',
+                        content: msg.content || '',
+                        messageId: msg.messageId || uuidv4(),
+                        ...(msg.rawOutput && { rawOutput: true }),
+                        ...(msg.hasToolOutputs && { hasToolOutputs: true, toolOutputs: msg.toolOutputs || [] })
+                    };
+                  })
+                : [];
+            
+            console.log('Formatted messages:', formattedMessages);
+            setMessages(formattedMessages);
+            
+            // If there are tool outputs in the response, set them
+            if (data.tool_outputs && data.tool_outputs.length > 0) {
+                setToolOutputs(data.tool_outputs);
+            } else {
+                setToolOutputs([]);
+            }
+        } catch (err) {
+            console.error('Error fetching thread messages:', err);
+            setError(err.message);
+            setMessages([]);
+            setToolOutputs([]);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
-
+    
     const sendMessage = useCallback(async (message) => {
-        if (!message.trim() || !threadId) return;
+        if (!message.trim() || !activeThread) return;
 
         setIsLoading(true);
         setError(null);
@@ -37,17 +82,19 @@ export const ChatProvider = ({ children }) => {
         try {
             const response = await fetch('http://localhost:8000/api/v1/chat/stream', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ 
                     message,
-                    thread_id: threadId
+                    thread_id: activeThread.thread_id,
+                    context_type: activeThread.context_type,
+                    task_type: activeThread.task_type
                 }),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to send message');
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                throw new Error(`Failed to send message: ${response.status} ${errorText}`);
             }
 
             const reader = response.body.getReader();
@@ -164,22 +211,23 @@ export const ChatProvider = ({ children }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [threadId]);
+    }, [activeThread]);
 
     const resetChat = useCallback(async () => {
-        if (!threadId) return;
+        if (!activeThread) return;
         
         try {
             const response = await fetch('http://localhost:8000/api/v1/chat/reset', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ thread_id: threadId }),
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ 
+                    thread_id: activeThread.thread_id 
+                }),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to reset chat');
+                const errorText = await response.text();
+                throw new Error(`Failed to reset chat: ${response.status} ${errorText}`);
             }
 
             setMessages([]);
@@ -187,29 +235,31 @@ export const ChatProvider = ({ children }) => {
             setToolOutputs([]);
         } catch (err) {
             setError(err.message);
+            console.error('Error resetting chat:', err);
         }
-    }, [threadId]);
+    }, [activeThread]);
 
-    const startNewThread = useCallback(() => {
-        // Generate a new thread ID
-        const newThreadId = uuidv4();
-        localStorage.setItem('chatThreadId', newThreadId);
-        setThreadId(newThreadId);
-        setMessages([]);
-        setError(null);
-        setToolOutputs([]);
-    }, []);
+    // Load messages when active thread changes
+    useEffect(() => {
+        if (activeThread?.thread_id) {
+            fetchThreadMessages(activeThread.thread_id);
+        } else {
+            // Clear messages if no active thread
+            setMessages([]);
+            setError(null);
+            setToolOutputs([]);
+        }
+    }, [activeThread?.thread_id, fetchThreadMessages]);
 
     return (
         <ChatContext.Provider value={{
             messages,
             isLoading,
             error,
-            threadId,
             toolOutputs,
             sendMessage,
             resetChat,
-            startNewThread
+            fetchThreadMessages
         }}>
             {children}
         </ChatContext.Provider>

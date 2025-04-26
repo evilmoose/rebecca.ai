@@ -4,15 +4,17 @@ FastAPI application entry point.
 """ 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_users import schemas
 from app.core.config import settings
 from app.core.db import test_db_connection
 from fastapi.responses import JSONResponse
+from app.schemas.users import UserRead, UserCreate, UserUpdate
 
 # add routers
 from app.api.users import auth_backend, fastapi_users
 from app.api.chat import router as chat_router
 from app.api.video_router import router as video_router
+from app.api.threads import router as threads_router
+from app.api.checkpoints import router as checkpoints_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -29,24 +31,6 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-# User schemas
-class UserRead(schemas.BaseUser[int]):
-    """User read schema."""
-    first_name: str | None = None
-    last_name: str | None = None
-
-
-class UserCreate(schemas.BaseUserCreate):
-    """User create schema."""
-    first_name: str | None = None
-    last_name: str | None = None
-
-
-class UserUpdate(schemas.BaseUserUpdate):
-    """User update schema."""
-    first_name: str | None = None
-    last_name: str | None = None
 
 # Include user routes
 app.include_router(
@@ -87,6 +71,20 @@ app.include_router(
     video_router,
     prefix=f"{settings.API_V1_STR}",
     tags=["video"],
+)
+
+# Include threads routes
+app.include_router(
+    threads_router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["threads"],
+)
+
+# Include checkpoints routes
+app.include_router(
+    checkpoints_router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["checkpoints"],
 )
 
 # Root endpoint

@@ -13,6 +13,7 @@ import Notifications from './pages/Notifications';
 import SimpleFooter from './components/SimpleFooter';
 import NormalFooter from './components/NormalFooter';
 import { ChatProvider } from './contexts/ChatContext';
+import { ThreadProvider } from './contexts/ThreadContext';
 import MainPanel from './components/MainPanel';
 import SidePanel from './components/SidePanel';
 import { useState } from 'react';
@@ -30,22 +31,24 @@ const AppContent = () => {
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   return (
-    <ChatProvider>
-      <div className="flex h-screen bg-gray-50">
-        <SidePanel 
-          isCollapsed={isCollapsed}
-          toggleCollapse={() => setIsCollapsed(!isCollapsed)}
-          isInputFocused={isInputFocused}
-          setIsInputFocused={setIsInputFocused}
-        />
-        <MainPanel 
-          isCollapsed={isCollapsed}
-          toggleCollapse={() => setIsCollapsed(!isCollapsed)}
-          isInputFocused={isInputFocused}
-          setIsInputFocused={setIsInputFocused}
-        />
-      </div>
-    </ChatProvider>
+    <ThreadProvider>
+      <ChatProvider>
+        <div className="flex h-screen bg-gray-50">
+          <SidePanel 
+            isCollapsed={isCollapsed}
+            toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+            isInputFocused={isInputFocused}
+            setIsInputFocused={setIsInputFocused}
+          />
+          <MainPanel 
+            isCollapsed={isCollapsed}
+            toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+            isInputFocused={isInputFocused}
+            setIsInputFocused={setIsInputFocused}
+          />
+        </div>
+      </ChatProvider>
+    </ThreadProvider>
   );
 };
 
@@ -64,9 +67,11 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <ChatProvider>
-                  <Dashboard />
-                </ChatProvider>
+                <ThreadProvider>
+                  <ChatProvider>
+                    <Dashboard />
+                  </ChatProvider>
+                </ThreadProvider>
               </ProtectedRoute>
             }
           />

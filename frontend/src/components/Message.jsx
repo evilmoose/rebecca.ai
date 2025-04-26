@@ -1,6 +1,9 @@
 import { UserCircle, Code, Search } from 'lucide-react';
 
 const Message = ({ role, content }) => {
+    // Debug logging for message props
+    console.log('Message component props:', { role, content });
+    
     // Function to check if content has search results format
     const hasSearchResults = (text) => {
         if (!text) return false;
